@@ -6,6 +6,7 @@ your network.
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://github.com/hacs/integration)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Buy Me A Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-ffdd00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black)](https://www.buymeacoffee.com/willdatrill2007)
 
 ## Features
 
@@ -36,29 +37,42 @@ your network.
 
 The Bolt encrypts its state and commands with two local keys. You need:
 
-| Value    | What it is                                        |
-|----------|---------------------------------------------------|
-| MAC      | The lock's BLE address (auto-filled on discovery) |
-| BLE ID   | Small integer ID (e.g. `1001`)                    |
-| State key| 16 ASCII characters                                |
-| Operate key | 16 ASCII characters                             |
+| Value       | What it is                                            |
+|-------------|-------------------------------------------------------|
+| MAC         | The lock's BLE address (auto-filled on discovery)      |
+| BLE ID      | Small integer ID (e.g. `1001`)                         |
+| State key   | Last 16 characters of the lock's cloud device UUID     |
+| Operate key | Last 16 characters of the lock's 32-hex BLE token      |
 
-Both keys come from your **lock dump**. The state key decrypts everything the lock
-broadcasts; the operate key signs lock/unlock commands.
+### Extracting the keys (one-time, ~2 minutes)
 
-> **TODO (maintainer):** document the exact dump procedure you used here — e.g.
-> Android HCI snoop capture of the Wyze app while it operates the lock, or the
-> extraction tool used. Point to the community write-up if one exists.
+Use the bundled helper [`tools/wyze_key_extract.py`](tools/wyze_key_extract.py).
+It contacts Wyze **once** to fetch the lock's secrets, prints the three values,
+and after that the integration never talks to the cloud again:
 
-The config flow validates the state key live during setup, so a wrong key is
-rejected on the spot with an "invalid state key" error.
+```bash
+pip install wyzeapy
+python3 tools/wyze_key_extract.py
+```
+
+Prerequisites:
+
+1. A free Wyze developer key: sign in at [developer.wyze.com](https://developer.wyze.com)
+   and generate an **API key + Key ID**.
+2. Your Wyze account credentials. If the account has 2FA enabled and login
+   fails, either temporarily disable 2FA for the extraction or fall back to the
+   ha-wyzeapi debug-log method described in the tool's output.
+
+The tool prints `state_key`, `operate_key`, and `ble_id` — paste them into the
+config flow fields of the same names. The config flow validates the state key
+live during setup, so a wrong key is rejected on the spot with a clear error.
 
 ## Installation
 
 ### HACS (recommended)
 
 1. Open HACS → Integrations → ⋮ → **Custom repositories**
-2. Add `https://github.com/YOUR_GITHUB_USERNAME/wyze-lock-bolt-local`, category **Integration**
+2. Add `https://github.com/willdatrill2007/Wyze-Lock-Bolt-Local`, category **Integration**
 3. Install **Wyze Lock Bolt Local** and restart Home Assistant
 
 ### Manual
@@ -121,6 +135,12 @@ or CRC errors, check for stale `__pycache__` folders and try another adapter fir
 - Lock state and battery are AES-ECB encrypted; the plaintext carries a `loock`
   validation marker — hence the lock's custom service UUID spelling `cool.knob`
 - Lock/unlock commands use a challenge-response exchange signed with the operate key
+
+## Support
+
+If this integration saved you a hub subscription or a headache, consider
+[buying me a coffee](https://www.buymeacoffee.com/willdatrill2007). Completely
+optional — issues and PRs are always free.
 
 ## Credits
 
