@@ -1,0 +1,64 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Wyze Lock Bolt",
+        "description": "Enter the BLE address and the two 16-character local keys from your Bolt dump. Home Assistant will connect to the lock to verify the state key before finishing setup.",
+        "data": {
+          "name": "Name",
+          "mac": "BLE MAC address",
+          "ble_id": "BLE ID",
+          "state_key": "State key",
+          "operate_key": "Operate key"
+        }
+      },
+      "bluetooth_confirm": {
+        "title": "Wyze Lock Bolt discovered",
+        "description": "Home Assistant discovered a {name} via Bluetooth ({mac}). You will need its 16-character state key and operate key from your Bolt dump to finish setup."
+      }
+    },
+    "error": {
+      "invalid_mac": "Enter a MAC address such as 04:0D:84:1C:FC:15.",
+      "invalid_key": "State key and operate key must each be exactly 16 ASCII characters.",
+      "cannot_connect": "Could not connect to the lock. Make sure it is in Bluetooth range, then try again.",
+      "invalid_state_key": "The state key did not decrypt the lock's data. Double-check the key from your Bolt dump.",
+      "unknown": "Unexpected error while talking to the lock."
+    },
+    "abort": {
+      "already_configured": "This Wyze Lock Bolt is already configured."
+    }
+  },
+  "entity": {
+    "lock": {
+      "bolt": {
+        "name": "Lock"
+      }
+    },
+    "sensor": {
+      "battery": {
+        "name": "Battery"
+      },
+      "signal_strength": {
+        "name": "Signal strength"
+      }
+    },
+    "button": {
+      "refresh": {
+        "name": "Refresh now"
+      }
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Wyze Lock Bolt options",
+        "description": "Choose how often Home Assistant reads the lock's state over Bluetooth. Persistent connection keeps a Bluetooth link open for fast commands and live state pushes, but this lock drops idle links after about 5 seconds (supervision timeout) -- set a keepalive interval (seconds) below to hold the link open with periodic reads. Keepalive and persistent mode both increase battery drain on the lock.",
+        "data": {
+          "poll_interval": "Poll interval (seconds)",
+          "persistent_connection": "Persistent connection (faster, higher battery use)",
+          "keepalive_interval": "Keepalive interval, seconds (0 = off; persistent mode only)"
+        }
+      }
+    }
+  }
+}

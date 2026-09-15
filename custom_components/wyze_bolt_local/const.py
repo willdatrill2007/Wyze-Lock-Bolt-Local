@@ -1,0 +1,19 @@
+DOMAIN = "wyze_bolt_local"
+CONF_MAC = "mac"
+CONF_STATE_KEY = "state_key"
+CONF_OPERATE_KEY = "operate_key"
+CONF_BLE_ID = "ble_id"
+CONF_POLL_INTERVAL = "poll_interval"
+CONF_PERSISTENT = "persistent_connection"
+CONF_KEEPALIVE = "keepalive_interval"
+
+DEFAULT_POLL_INTERVAL = 30
+POLL_INTERVAL_OPTIONS = list(range(3, 61))  # 3-60 seconds, selectable in whole seconds
+
+STATE_UUID = "00002220-0000-6b63-6f6c-2e6b636f6f6c"
+UART_RX_UUID = "6e400003-b5a3-f393-e0a9-e50e24dcca9e"
+UART_TX_UUID = "6e400002-b5a3-f393-e0a9-e50e24dcca9e"
+BATTERY_UUID = "0000180f-0000-1000-8000-00805f9b34fb"
+BATTERY_LEVEL_UUID = "00002a19-0000-1000-8000-00805f9b34fb"
+DEFAULT_PERSISTENT = False
+DEFAULT_KEEPALIVE = 0
