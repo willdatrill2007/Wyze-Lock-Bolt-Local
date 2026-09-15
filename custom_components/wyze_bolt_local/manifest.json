@@ -1,7 +1,7 @@
 {
   "domain": "wyze_bolt_local",
   "name": "Wyze Lock Bolt Local",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "documentation": "https://github.com/willdatrill2007/Wyze-Lock-Bolt-Local",
   "issue_tracker": "https://github.com/willdatrill2007/Wyze-Lock-Bolt-Local/issues",
   "requirements": [

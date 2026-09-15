@@ -57,6 +57,8 @@ except (TypeError, ValueError):  # pragma: no cover - exotic builds
 # Seconds to wait for the lock's BLE advertisement to reappear before
 # declaring a poll failure (advertisements can briefly vanish right after
 # a disconnect, especially via Bluetooth proxies).
+CONNECT_TIMEOUT = 12.0
+
 VISIBILITY_TIMEOUT = 8.0
 
 # Seconds after the last successful poll during which transient poll
@@ -103,6 +105,7 @@ class WyzeBoltCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         self._last_uart_chunk_at = 0.0
         self._last_state_chunk: bytes | None = None
         self._last_state_chunk_at = 0.0
+        self._closed = False
         self._device_info_fetched = False
         self.device_info_extra: dict[str, str] = {}
 
@@ -170,8 +173,15 @@ class WyzeBoltCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         # (poll retry, reconnect loop, 60s availability grace) handle it.
         # The library's internal multi-attempt retries produced 45-50s
         # failed fetches and piled onto an already-busy lock.
-        self._client = await establish_connection(
-            BleakClient, device, device.address, max_attempts=1, **kwargs
+        # Hard cap on the whole connect: this bleak-retry-connector version
+        # retries internally (InProgress handling, device-reappear waits)
+        # regardless of max_attempts, which produced 30s+ hangs. Our own
+        # retry/backoff/grace layers handle recovery.
+        self._client = await asyncio.wait_for(
+            establish_connection(
+                BleakClient, device, device.address, max_attempts=1, **kwargs
+            ),
+            timeout=CONNECT_TIMEOUT,
         )
         self._subscribed = False
         self._maybe_start_keepalive()
@@ -179,6 +189,8 @@ class WyzeBoltCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
     def _maybe_start_keepalive(self) -> None:
         """Start the periodic keepalive read (persistent mode only)."""
+        if self._closed:
+            return
         if (
             self.persistent
             and self.keepalive > 0
@@ -195,7 +207,7 @@ class WyzeBoltCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         idle connections after ~5s -- the negotiated supervision timeout),
         and pick up manual state changes quickly between notifications.
         """
-        while self.persistent and self.keepalive > 0:
+        while self.persistent and self.keepalive > 0 and not self._closed:
             await asyncio.sleep(self.keepalive)
             client = self._client
             if client is None or not client.is_connected:
@@ -222,12 +234,42 @@ class WyzeBoltCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             self._last_success_at = time.monotonic()
             self.async_set_updated_data(self.data)
 
+    async def async_shutdown(self) -> None:
+        """Cancel background tasks and mark this coordinator dead.
+
+        Called when setup fails (HA retries setup with a fresh coordinator
+        after ConfigEntryNotReady) and on unload. Without this, orphaned
+        coordinators' reconnect/keepalive loops run forever and keep
+        polling the lock in the background (observed as multiple
+        concurrent _reconnect_loop tasks, bootstrap timeouts, and In
+        Progress connection contention).
+        """
+        self._closed = True
+        for task in (self._reconnect_task, self._keepalive_task):
+            if task is not None and not task.done():
+                task.cancel()
+        for task in (self._reconnect_task, self._keepalive_task):
+            if task is not None:
+                try:
+                    await task
+                except Exception:
+                    pass
+        client = self._client
+        self._client = None
+        if client is not None:
+            try:
+                await client.disconnect()
+            except Exception:
+                pass
+
     def _on_client_disconnect(self, client: BleakClient | None = None) -> None:
         # bleak >= 0.20 passes the client that disconnected; it may also be
         # invoked from a D-Bus worker thread, so hop to the event loop.
         self.hass.loop.call_soon_threadsafe(self._handle_disconnect, client)
 
     def _handle_disconnect(self, client: BleakClient | None = None) -> None:
+        if self._closed:
+            return
         if client is not None and client is not self._client:
             # Stale client object we have already replaced; ignore.
             return
@@ -243,7 +285,7 @@ class WyzeBoltCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
     def _schedule_reconnect(self, delay: float) -> None:
         """Connect soon if the link is down; no-op if it is already live."""
-        if not self.persistent:
+        if self._closed or not self.persistent:
             return
         if self._client is not None and self._client.is_connected:
             return
@@ -256,9 +298,9 @@ class WyzeBoltCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     async def _reconnect_loop(self, start_delay: float = 1.0) -> None:
         """Persistent-mode reconnect with exponential backoff."""
         delay = start_delay
-        while self.persistent:
+        while self.persistent and not self._closed:
             await asyncio.sleep(delay)
-            if not self.persistent:
+            if self._closed or not self.persistent:
                 return
             if self._client is not None and self._client.is_connected:
                 return

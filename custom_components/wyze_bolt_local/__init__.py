@@ -7,12 +7,19 @@ PLATFORMS = ["button", "lock", "sensor"]
 async def async_setup_entry(hass, entry):
     coordinator = WyzeBoltCoordinator(hass, entry)
 
-    hass.data.setdefault(DOMAIN, {})[entry.entry_id] = coordinator
+    try:
+        # Convert a failed first poll into ConfigEntryNotReady so HA retries
+        # setup automatically once Bluetooth discovery catches up. A plain
+        # async_refresh() would silently leave all entities unavailable forever.
+        await coordinator.async_config_entry_first_refresh()
+    except Exception:
+        # Setup failed (HA retries with a fresh coordinator): shut this one
+        # down so its reconnect/keepalive loops don't poll the lock forever
+        # in the background.
+        await coordinator.async_shutdown()
+        raise
 
-    # Convert a failed first poll into ConfigEntryNotReady so HA retries
-    # setup automatically once Bluetooth discovery catches up. A plain
-    # async_refresh() would silently leave all entities unavailable forever.
-    await coordinator.async_config_entry_first_refresh()
+    hass.data.setdefault(DOMAIN, {})[entry.entry_id] = coordinator
 
     await hass.config_entries.async_forward_entry_setups(
         entry,
@@ -35,6 +42,8 @@ async def async_unload_entry(hass, entry):
         PLATFORMS,
     )
 
-    hass.data.get(DOMAIN, {}).pop(entry.entry_id, None)
+    coordinator = hass.data.get(DOMAIN, {}).pop(entry.entry_id, None)
+    if coordinator is not None:
+        await coordinator.async_shutdown()
 
     return unload_ok
