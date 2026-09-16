@@ -4,10 +4,6 @@ Local-only, cloud-free Home Assistant integration for the **Wyze Lock Bolt** (YD
 over Bluetooth Low Energy. No Wyze account, no app, no cloud — your lock, your keys,
 your network.
 
-[![hacs_badge](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://github.com/hacs/integration)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Buy Me A Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-ffdd00?style=for-the-badge&logo=buy-me-a-coffee&logoColor=black)](https://www.buymeacoffee.com/willdatrill2007)
-
 ## Features
 
 - **Lock entity** with real-time state updates pushed by the lock itself
@@ -37,20 +33,20 @@ your network.
 
 The Bolt encrypts its state and commands with two local keys. You need:
 
-| Value       | What it is                                            |
-|-------------|-------------------------------------------------------|
-| MAC         | The lock's BLE address (auto-filled on discovery)      |
-| BLE ID      | Small integer ID (e.g. `1001`)                         |
-| State key   | Last 16 characters of the lock's cloud device UUID     |
-| Operate key | Last 16 characters of the lock's 32-hex BLE token      |
+| Value         | What it is                                                    |
+| ------------- | ------------------------------------------------------------- |
+| MAC           | The lock's BLE address (auto-filled on discovery)             |
+| BLE ID        | Small integer ID (e.g. `1001`)                                |
+| State key     | Last 16 characters of the lock's cloud device UUID            |
+| Operate key   | Last 16 characters of the lock's 32-hex BLE token             |
 
 ### Extracting the keys (one-time, ~2 minutes)
 
-Use the bundled helper [`tools/wyze_key_extract.py`](tools/wyze_key_extract.py).
+Use the bundled helper `tools/wyze_key_extract.py`.
 It contacts Wyze **once** to fetch the lock's secrets, prints the three values,
 and after that the integration never talks to the cloud again:
 
-```bash
+```
 pip install wyzeapy
 python3 tools/wyze_key_extract.py
 ```
@@ -75,6 +71,8 @@ live during setup, so a wrong key is rejected on the spot with a clear error.
 2. Add `https://github.com/willdatrill2007/Wyze-Lock-Bolt-Local`, category **Integration**
 3. Install **Wyze Lock Bolt Local** and restart Home Assistant
 
+[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=willdatrill2007&repository=Wyze-Lock-Bolt-Local&category=integration)
+
 ### Manual
 
 Copy the `custom_components/wyze_bolt_local` folder into your `custom_components/`
@@ -88,11 +86,39 @@ prefer manual setup, you only need the four values above.
 
 ## Options
 
-| Option               | Default | Meaning                                                        |
-|----------------------|---------|----------------------------------------------------------------|
-| Poll interval        | 30 s    | How often state/battery are read when not pushed               |
-| Persistent connection| off     | Keep the BLE link open for instant commands                    |
-| Keepalive interval   | 0 (off) | Periodic state reads that hold the link open (persistent only) |
+| Option                  | Default    | Meaning                                                        |
+| ----------------------- | ---------- | -------------------------------------------------------------- |
+| Poll interval           | 30 s       | How often state/battery are read when not pushed               |
+| Persistent connection   | off        | Keep the BLE link open for instant commands                    |
+| Keepalive interval      | 0 (off)    | Periodic state reads that hold the link open (persistent only) |
+
+### Choosing your settings (speed vs. battery)
+
+Fast control requires the lock's radio to be awake, and this lock's firmware
+fights hard to sleep — so there's a real trade-off. Measured behavior:
+
+| Config                                   | Command speed                    | Battery                   | Notes                                                                                                                              |
+| ---------------------------------------- | -------------------------------- | ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| Persistent **ON**, keepalive **2s**      | ~instant                         | worst                     | maximum responsiveness                                                                                                             |
+| Persistent **ON**, keepalive **4s**      | ~instant, same as 2s             | marginally better         | Supervision timeout is 5s, so 4s is the slowest keepalive that still holds the link; the lock's own ~10s connection rotation causes the remaining brief dead windows |
+| Persistent **ON**, keepalive **10s+**    | fast-ish                         | still high, more churn    | Supervision kills the link at ~5s of silence, so this degenerates into constant reconnect cycles — strictly worse than 4s or plain polling |
+| Persistent **OFF**, poll **30s**         | 5–10s (lock asleep)              | good                      | the Wyze-app model: connect on demand                                                                                              |
+| Persistent **OFF**, poll **60s**         | 5–10s                            | best                      | lock sleeps the most; manual turns up to 60s late                                                                                  |
+
+**Recommended balance:** persistent ON + keepalive 4s + poll 60s. Keepalive 4s
+holds the link just as well as 2s (the rotation cycles are the lock's firmware,
+not something faster polling prevents), and poll 60s only gates the occasional
+battery reconciliation read.
+
+**If battery matters most:** persistent OFF + poll 60s, and accept 5–10s
+commands — you're waking a sleeping lock.
+
+**How to decide empirically:** watch the battery sensor — note the % today and
+re-check in a couple of weeks at your chosen setting. The Bolt runs on AAs; if
+you're replacing them more often than every few months, step down toward poll
+mode. Also watch the RSSI sensor: a marginal link (−80 dBm or worse) causes
+retries that cost more battery than any setting here, so placement is the
+cheapest battery optimization of all.
 
 ### About persistent mode and battery life
 
@@ -139,14 +165,14 @@ or CRC errors, check for stale `__pycache__` folders and try another adapter fir
 ## Support
 
 If this integration saved you a hub subscription or a headache, consider
-[buying me a coffee](https://www.buymeacoffee.com/willdatrill2007). Completely
+[buying me a coffee](https://github.com/willdatrill2007). Completely
 optional — issues and PRs are always free.
 
 ## Credits
 
 - Protocol reverse engineering by the wyze-lock-bolt-local contributors
 - Built on [bleak](https://github.com/hbldh/bleak),
-  [bleak-retry-connector](https://github.com/Bluetooth-Devices/bleak-retry-connector)
+  [bleak-retry-connector](https://github.com/bluetooth-devices/bleak-retry-connector)
   and Home Assistant's Bluetooth integration
 
 ## Disclaimer
