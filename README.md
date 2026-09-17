@@ -174,7 +174,7 @@ or CRC errors, check for stale `__pycache__` folders and try another adapter fir
 ## Support
 
 If this integration saved you a hub subscription or a headache, consider
-[buying me a coffee](https://github.com/willdatrill2007). Completely
+[buying me a coffee](https://www.buymeacoffee.com/willdatrill2007). Completely
 optional — issues and PRs are always free.
 
 ## Credits
