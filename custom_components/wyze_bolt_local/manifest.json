@@ -1,24 +1,24 @@
 {
   "domain": "wyze_bolt_local",
   "name": "Wyze Lock Bolt Local",
-  "version": "1.0.1",
-  "documentation": "https://github.com/willdatrill2007/Wyze-Lock-Bolt-Local",
-  "issue_tracker": "https://github.com/willdatrill2007/Wyze-Lock-Bolt-Local/issues",
-  "requirements": [
-    "bleak-retry-connector>=4.3.0",
-    "cryptography>=42.0.0"
+  "bluetooth": [
+    {
+      "service_uuid": "00002220-0000-6b63-6f6c-2e6b636f6f6c"
+    }
   ],
   "codeowners": [
     "@willdatrill2007"
   ],
   "config_flow": true,
-  "iot_class": "local_push",
   "dependencies": [
     "bluetooth"
   ],
-  "bluetooth": [
-    {
-      "service_uuid": "00002220-0000-6b63-6f6c-2e6b636f6f6c"
-    }
-  ]
+  "documentation": "https://github.com/willdatrill2007/Wyze-Lock-Bolt-Local",
+  "iot_class": "local_push",
+  "issue_tracker": "https://github.com/willdatrill2007/Wyze-Lock-Bolt-Local/issues",
+  "requirements": [
+    "bleak-retry-connector>=4.3.0",
+    "cryptography>=42.0.0"
+  ],
+  "version": "1.0.2"
 }
