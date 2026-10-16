@@ -1,12 +1,11 @@
 {
   "domain": "wyze_bolt_local",
   "name": "Wyze Lock Bolt Local",
-  "version": "1.0.1",
+  "version": "1.0.3",
   "documentation": "https://github.com/willdatrill2007/Wyze-Lock-Bolt-Local",
   "issue_tracker": "https://github.com/willdatrill2007/Wyze-Lock-Bolt-Local/issues",
   "requirements": [
-    "bleak-retry-connector>=4.3.0",
-    "cryptography>=42.0.0"
+    "bleak-retry-connector>=4.3.0"
   ],
   "codeowners": [
     "@willdatrill2007"
@@ -17,6 +16,13 @@
     "bluetooth"
   ],
   "bluetooth": [
+    {
+      "local_name": "Wyze Lock"
+    },
+    {
+      "manufacturer_id": 465,
+      "service_uuid": "0000fe24-0000-1000-8000-00805f9b34fb"
+    },
     {
       "service_uuid": "00002220-0000-6b63-6f6c-2e6b636f6f6c"
     }
